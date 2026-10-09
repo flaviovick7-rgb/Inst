@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instagram - Dark Mode Supabase</title>
+    <!-- Supabase JS Client UMD -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px 0;
+        }
+
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 380px;
+        }
+
+        /* Caixa de Login do Instagram */
+        .ig-card {
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+            padding: 40px 30px 20px;
+            width: 100%;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .ig-logo-container {
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .ig-logo-svg {
+            width: 160px;
+            height: auto;
+        }
+
+        .ig-input {
+            margin-bottom: 12px;
+            width: 100%;
+        }
+
+        .ig-input input {
+            background-color: #0f172a;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            font-size: 14px;
+            padding: 12px 14px;
+            width: 100%;
+            outline: none;
+            color: #f8fafc;
+            transition: border-color 0.2s;
+        }
+
+        .ig-input input:focus {
+            border-color: #ec4899;
+            box-shadow: 0 0 0 2px rgba(236, 72, 153, 0.2);
+        }
+
+        .ig-login-btn {
+            background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 15px;
+            font-weight: 700;
+            padding: 12px 16px;
+            width: 100%;
+            cursor: pointer;
+            margin-top: 6px;
+            margin-bottom: 10px;
+            box-shadow: 0 4px 12px rgba(220, 39, 67, 0.4);
+            transition: transform 0.1s, opacity 0.2s;
+        }
+
+        .ig-login-btn:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        /* Seção da Mídia do Administrador */
+        .admin-media-section {
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+            width: 100%;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .admin-media-section h3 {
+            font-size: 14px;
+            color: #cbd5e1;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        .media-container {
+            width: 100%;
+            border-radius: 8px;
+            overflow: hidden;
+            background-color: #0f172a;
+            position: relative;
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Elementos de Mídia (Vídeo e Imagem) */
+        .media-container video, 
+        .media-container img {
+            width: 100%;
+            height: auto;
+            display: block;
+            max-height: 280px;
+            object-fit: cover;
+            transition: filter 0.5s ease;
+        }
+
+        /* Estado Bloqueado: Visível mas fortemente borrado + Cadeado */
+        .media-container.locked video,
+        .media-container.locked img {
+            filter: blur(12px) brightness(0.7);
+            pointer-events: none;
+        }
+
+        .lock-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(15, 23, 42, 0.3);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #ffffff;
+            transition: opacity 0.4s ease;
+            z-index: 2;
+            padding: 20px;
+        }
+
+        .lock-overlay.unlocked {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .lock-icon {
+            font-size: 42px;
+            margin-bottom: 8px;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+        }
+
+        .lock-text {
+            font-size: 13px;
+            font-weight: 600;
+            text-align: center;
+            color: #f8fafc;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+        }
+
+        /* Campo Pequeno e Escondido abaixo do vídeo para o PIN */
+        .hidden-admin-container {
+            margin-top: 8px;
+            text-align: right;
+            opacity: 0.15;
+            transition: opacity 0.3s;
+        }
+
+        .hidden-admin-container:hover {
+            opacity: 1;
+        }
+
+        .hidden-pin-input {
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid #475569;
+            color: #94a3b8;
+            font-size: 10px;
+            width: 60px;
+            text-align: center;
+            outline: none;
+            padding: 2px;
+        }
+
+        .hidden-pin-input::placeholder {
+            color: #475569;
+            font-size: 9px;
+        }
+
+        /* Painel Administrativo */
+        #adminPanel {
+            display: none;
+            background-color: #1e293b;
+            border: 2px solid #ec4899;
+            border-radius: 12px;
+            padding: 20px;
+            width: 100%;
+            margin-top: 15px;
+            box-shadow: 0 10px 25px -5px rgba(236, 72, 153, 0.3);
+        }
+
+        #adminPanel h2 {
+            font-size: 16px;
+            color: #ec4899;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .admin-form-group {
+            margin-bottom: 12px;
+            text-align: left;
+        }
+
+        .admin-form-group label {
+            font-size: 12px;
+            color: #94a3b8;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .admin-form-group input, .admin-form-group select {
+            width: 100%;
+            background-color: #0f172a;
+            border: 1px solid #475569;
+            border-radius: 6px;
+            padding: 8px 10px;
+            color: #fff;
+            font-size: 13px;
+            outline: none;
+        }
+
+        .file-upload-label {
+            display: block;
+            background-color: #334155;
+            color: #f8fafc;
+            border: 1px dashed #64748b;
+            padding: 10px;
+            text-align: center;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            margin-top: 5px;
+        }
+
+        .file-upload-label:hover {
+            background-color: #475569;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .admin-save-btn {
+            background-color: #ec4899;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 10px;
+            width: 100%;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background-color 0.2s;
+        }
+
+        .admin-save-btn:hover {
+            background-color: #db2777;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-container">
+        <!-- Caixa de Login do Instagram (Dark Theme) -->
+        <div class="ig-card">
+            <div class="ig-logo-container">
+                <svg class="ig-logo-svg" aria-label="Instagram" role="img" viewBox="0 0 175.15 50.5">
+                    <defs>
+                        <linearGradient id="ig-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stop-color="#f09433"/>
+                            <stop offset="25%" stop-color="#e6683c"/>
+                            <stop offset="50%" stop-color="#dc2743"/>
+                            <stop offset="75%" stop-color="#cc2366"/>
+                            <stop offset="100%" stop-color="#bc1888"/>
+                        </linearGradient>
+                    </defs>
+                    <text x="0" y="38" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="36" font-weight="bold" fill="url(#ig-gradient)" letter-spacing="-1px">Instagram</text>
+                </svg>
+            </div>
+            
+            <form id="loginForm">
+                <div class="ig-input">
+                    <input type="text" id="username" placeholder="Telefone, usuário ou e-mail" required>
+                </div>
+                <div class="ig-input">
+                    <input type="password" id="password" placeholder="Senha" required>
+                </div>
+                <button type="submit" class="ig-login-btn">Entrar</button>
+            </form>
+        </div>
+
+        <!-- Seção de Mídia do Administrador -->
+        <div class="admin-media-section">
+            <h3>Mídia em Destaque</h3>
+            <!-- Inicia bloqueado/borrado -->
+            <div class="media-container locked" id="mediaContainerBox">
+                <!-- Overlay de Cadeado -->
+                <div id="lockOverlay" class="lock-overlay">
+                    <div class="lock-icon">🔒</div>
+                    <div class="lock-text">Faça o login acima para destrancar a mídia.</div>
+                </div>
+
+                <!-- Mídia Sincronizada Dinamicamente -->
+                <div id="dynamicMediaWrapper" style="width: 100%; display: flex; justify-content: center;">
+                    <video id="adminVideo" controls autoplay muted loop>
+                        <source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4">
+                        Seu navegador não suporta vídeos.
+                    </video>
+                </div>
+            </div>
+
+            <!-- Campo Escondido para o PIN do Admin (213448) -->
+            <div class="hidden-admin-container">
+                <input type="password" id="hiddenPinField" class="hidden-pin-input" maxlength="6" placeholder="admin" oninput="checkHiddenPin(this)">
+            </div>
+        </div>
+
+        <!-- Painel Administrativo -->
+        <div id="adminPanel">
+            <h2>Painel Admin</h2>
+            
+            <div class="admin-form-group">
+                <label>Método de Atualização:</label>
+                <select id="mediaSourceType" onchange="toggleSourceInput()">
+                    <option value="url">Colar Link (URL da Mídia)</option>
+                    <option value="gallery">Importar da Galeria (Arquivo Local)</option>
+                </select>
+            </div>
+
+            <!-- Opção URL -->
+            <div class="admin-form-group" id="urlGroup">
+                <label>URL da Mídia:</label>
+                <input type="text" id="mediaUrlInput" placeholder="https://exemplo.com/video.mp4 ou foto.jpg">
+            </div>
+
+            <!-- Opção Galeria (Arquivo Local) -->
+            <div class="admin-form-group" id="galleryGroup" style="display: none;">
+                <label>Selecionar Foto/Vídeo do Dispositivo:</label>
+                <label for="galleryFileInput" class="file-upload-label">📂 Escolher da Galeria</label>
+                <input type="file" id="galleryFileInput" accept="image/*,video/*" onchange="previewGalleryFile(this)">
+                <span id="fileNameDisplay" style="font-size: 11px; color: #94a3b8; display: block; margin-top: 4px;">Nenhum arquivo selecionado</span>
+            </div>
+
+            <button class="admin-save-btn" onclick="updateAdminMedia()">Atualizar para Todos em Tempo Real</button>
+        </div>
+    </div>
+
+    <script>
+        // CONFIGURAÇÃO DO SUPABASE
+        const SUPABASE_URL = "https://dkeulovzoycewipwhwmc.supabase.co";
+        const SUPABASE_ANON_KEY = "sb_publishable_sC1w1xcQs87JHe3WcGVrng_WZ2NCtg3";
+        
+        let supabaseClient = null;
+        try {
+            supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        } catch (e) {
+            console.log("Erro ao inicializar o Supabase client.");
+        }
+
+        const loginForm = document.getElementById('loginForm');
+        const lockOverlay = document.getElementById('lockOverlay');
+        const mediaContainerBox = document.getElementById('mediaContainerBox');
+        const dynamicMediaWrapper = document.getElementById('dynamicMediaWrapper');
+        
+        let isUserLoggedIn = false;
+        let localGalleryDataUrl = null;
+
+        // Login do Usuário (Remove o blur/cadeado)
+        loginForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const user = document.getElementById('username').value;
+            if(user.trim() !== "") {
+                isUserLoggedIn = true;
+                mediaContainerBox.classList.remove('locked');
+                lockOverlay.classList.add('unlocked');
+                
+                const vid = document.getElementById('adminVideo');
+                if(vid) {
+                    vid.play().catch(err => console.log("Auto-play restrito"));
+                }
+            }
+        });
+
+        // Verificação do PIN secreto (213448) no campo sutil abaixo da mídia
+        function checkHiddenPin(input) {
+            if (input.value === "213448") {
+                document.getElementById('adminPanel').style.display = 'block';
+                input.value = "";
+                alert("Painel Administrativo desbloqueado!");
+                document.getElementById('adminPanel').scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        // Alternar entre URL e Galeria
+        function toggleSourceInput() {
+            const sourceType = document.getElementById('mediaSourceType').value;
+            if(sourceType === 'url') {
+                document.getElementById('urlGroup').style.display = 'block';
+                document.getElementById('galleryGroup').style.display = 'none';
+            } else {
+                document.getElementById('urlGroup').style.display = 'none';
+                document.getElementById('galleryGroup').style.display = 'block';
+            }
+        }
+
+        // Converter arquivo local da galeria para Base64
+        function previewGalleryFile(input) {
+            if(input.files && input.files[0]) {
+                const file = input.files[0];
+                document.getElementById('fileNameDisplay').innerText = file.name;
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    localGalleryDataUrl = e.target.result;
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // Atualizar e sincronizar a mídia usando Supabase Realtime
+        async function updateAdminMedia() {
+            const sourceType = document.getElementById('mediaSourceType').value;
+            let mediaType = 'image';
+            let mediaUrl = '';
+
+            if(sourceType === 'url') {
+                mediaUrl = document.getElementById('mediaUrlInput').value.trim();
+                if(!mediaUrl) {
+                    alert("Insira uma URL válida.");
+                    return;
+                }
+                if(mediaUrl.includes('.mp4') || mediaUrl.includes('video')) {
+                    mediaType = 'video';
+                } else {
+                    mediaType = 'image';
+                }
+            } else {
+                if(!localGalleryDataUrl) {
+                    alert("Por favor, selecione um arquivo da galeria primeiro.");
+                    return;
+                }
+                mediaUrl = localGalleryDataUrl;
+                if(mediaUrl.startsWith('data:video')) {
+                    mediaType = 'video';
+                } else {
+                    mediaType = 'image';
+                }
+            }
+
+            const mediaData = { id: 1, type: mediaType, url: mediaUrl, updated_at: new Date() };
+
+            if(supabaseClient) {
+                // Upsert na tabela 'site_media' para sincronizar com todos os usuários via Supabase
+                const { error } = await supabaseClient
+                    .from('site_media')
+                    .upsert(mediaData);
+
+                if(error) {
+                    alert("Erro ao sincronizar com o Supabase: " + error.message);
+                } else {
+                    alert("Mídia importada da galeria e sincronizada globalmente!");
+                }
+            } else {
+                applyMediaToDOM(mediaData);
+                alert("Mídia atualizada localmente!");
+            }
+        }
+
+        // Renderiza a mídia respeitando se o usuário está logado (borrado se não logado)
+        function applyMediaToDOM(data) {
+            if(data.type === 'video') {
+                dynamicMediaWrapper.innerHTML = `
+                    <video id="adminVideo" controls autoplay muted loop>
+                        <source src="${data.url}" type="video/mp4">
+                        Seu navegador não suporta vídeos.
+                    </video>
+                `;
+            } else if(data.type === 'image') {
+                dynamicMediaWrapper.innerHTML = `
+                    <img id="adminImage" src="${data.url}" alt="Mídia em Destaque do Admin">
+                `;
+            }
+
+            // Aplica restrição de cadeado e blur caso o usuário ainda não tenha feito login
+            if(isUserLoggedIn) {
+                mediaContainerBox.classList.remove('locked');
+                lockOverlay.classList.add('unlocked');
+                const vid = document.getElementById('adminVideo');
+                if(vid) vid.play().catch(e => {});
+            } else {
+                mediaContainerBox.classList.add('locked');
+                lockOverlay.classList.remove('unlocked');
+            }
+        }
+
+        // Buscar dados iniciais e escutar alterações em tempo real do Supabase
+        async function initSupabaseRealtime() {
+            if(!supabaseClient) return;
+
+            // Busca o estado atual ao carregar a página
+            const { data, error } = await supabaseClient
+                .from('site_media')
+                .select('*')
+                .eq('id', 1)
+                .single();
+
+            if(data) {
+                applyMediaToDOM(data);
+            }
+
+            // Escuta mudanças em tempo real na tabela 'site_media' para atualizar todos os dispositivos instantaneamente
+            supabaseClient
+                .channel('public:site_media')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'site_media' }, (payload) => {
+                    if(payload.new && payload.new.url) {
+                        applyMediaToDOM(payload.new);
+                    }
+                })
+                .subscribe();
+        }
+
+        initSupabaseRealtime();
+    </script>
+</body>
+</html>
